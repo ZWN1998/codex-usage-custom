@@ -1,0 +1,5 @@
+interface:
+  display_name: "Codex Usage Custom"
+  short_description: "自定义位置、字号和颜色的本地用量浮窗。"
+  brand_color: "#8C879F"
+  default_prompt: "启动 Codex Usage 浮窗"

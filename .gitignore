@@ -1,0 +1,8 @@
+**/bin/
+**/obj/
+artifacts/
+.tmp/
+.DS_Store
+*.pdb
+*.user
+*.suo
