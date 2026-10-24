@@ -5,13 +5,20 @@
 
 ## 下载安装
 
-前往 [Releases](https://github.com/ZWN1998/codex-usage-custom/releases/latest)，下载 `CodexUsage-Custom-0.1.5-macos-arm64.zip`。
+前往 [Releases](https://github.com/ZWN1998/codex-usage-custom/releases/latest)。
+安装包以三个分卷提供，自动安装脚本会下载、按序合并并校验完整 ZIP。
 需要 macOS 13+ 和已登录的本地 Codex 桌面应用，无需单独安装 .NET。
 
-1. 将安装 ZIP 解压到长期保留的位置，例如 `~/Applications/CodexUsage-Custom`。
-2. 在终端进入解压后的 `CodexUsage-Custom-macos-arm64` 目录，运行 `sh ./install-macos.sh`。
-3. 在新的本地聊天中使用 `@Codex Usage Custom`，让它启动浮窗。
-4. 右键浮窗，选择 **位置、字号与颜色…** 进行调整。
+在终端运行：
+
+```sh
+curl -fL -o install-macos-release.sh https://github.com/ZWN1998/codex-usage-custom/releases/download/v0.1.5/install-macos-release.sh
+sh install-macos-release.sh
+```
+
+安装文件保留到 `~/Applications/CodexUsage-Custom-0.1.5/`。
+安装后在新的本地聊天中使用 `@Codex Usage Custom` 启动浮窗，右键进入 **位置、字号与颜色…**。
+手动合并分卷的方法见 [INSTALL.md](INSTALL.md)。
 
 也可以在解压目录的 `plugins/codex-usage-custom` 内执行：
 
@@ -45,8 +52,7 @@ App 为本地 ad-hoc 签名，尚无 Apple Developer ID 分发签名或公证；
 ZIP 已使用 macOS `ditto` 保留签名元数据，解压后及独立测试配置目录安装后的 App 签名校验通过。
 尚未在第二台干净 Mac 上完成下载、Gatekeeper 与全部 UI 操作验收。
 
-`CodexUsage-Custom-0.1.5-plugin.zip` 是不带 marketplace 包装的插件根目录包；普通用户下载 `macos-arm64.zip` 安装包即可。
-用 `shasum -a 256 -c SHA256SUMS.txt` 检查下载完整性（将两个 ZIP 与校验文件放在同一目录）。
+`SHA256SUMS.txt` 包含三个分卷和安装脚本的校验值。将这四个文件和校验文件放在同一目录后，可用 `shasum -a 256 -c SHA256SUMS.txt` 检查；自动安装脚本另外检查合并后的完整 ZIP。
 
 ## 数据与隐私
 
