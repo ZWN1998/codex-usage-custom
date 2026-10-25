@@ -1,7 +1,7 @@
 {
   "name": "codex-usage-custom",
-  "version": "0.1.5",
-  "description": "Customizable local Codex usage overlay for macOS Apple silicon.",
+  "version": "0.1.6",
+  "description": "Customizable local Codex usage overlay. Windows x64 edition with independent startup management; macOS arm64 release remains available separately.",
   "skills": "./skills/",
   "requires_local_executor": true,
   "interface": {
@@ -10,7 +10,7 @@
     "composerIcon": "./assets/codex-usage-icon.svg",
     "logo": "./assets/codex-usage-logo.png",
     "shortDescription": "可自定义位置、方向、字号和颜色的 Codex 用量浮窗。",
-    "longDescription": "macOS Apple 芯片本地桌面浮窗。显示五小时及每周剩余额度、重置倒计时；支持左侧竖排、顶部横排、8–24 字号、自定义颜色和全屏定位。基于 Jay Hilwig 的 Codex Usage 修改，本包不是上游官方发行版。",
+    "longDescription": "Windows x64 本地桌面用量浮窗：六种位置、横竖排、8–24 字号、自定义颜色、精确时间悬停查看和用户登录联动。Mac Apple 芯片请使用原有独立发行包。基于 Jay Hilwig 的 Codex Usage 修改，非上游官方发行版。",
     "category": "Productivity",
     "capabilities": [
       "Interactive"

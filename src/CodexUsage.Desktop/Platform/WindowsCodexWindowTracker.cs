@@ -22,6 +22,10 @@ internal sealed class WindowsCodexWindowTracker : ICodexWindowTracker
             return false;
         }
 
+        var foreground = GetAncestor(GetForegroundWindow(), GaRootOwner);
+        if (foreground != nint.Zero && foreground != _cachedWindow && IsCodexWindow(foreground))
+            _cachedWindow = foreground;
+
         if (_cachedWindow == nint.Zero
             || !IsWindow(_cachedWindow)
             || !IsWindowVisible(_cachedWindow)
@@ -107,7 +111,7 @@ internal sealed class WindowsCodexWindowTracker : ICodexWindowTracker
         return processId != 0 && IsCodexProcess(processId);
     }
 
-    private static bool IsCodexProcess(uint processId)
+    internal static bool IsCodexProcess(uint processId)
     {
         var process = OpenProcess(ProcessQueryLimitedInformation, false, processId);
         if (process == nint.Zero)

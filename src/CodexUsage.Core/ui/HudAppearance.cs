@@ -91,12 +91,13 @@ public sealed class HudAppearanceStore(string path)
         Converters = { new JsonStringEnumConverter() },
     };
 
-    public HudAppearance Read()
+    public HudAppearance Read(HudAppearance? fallback = null)
     {
-        try { return (JsonSerializer.Deserialize<HudAppearance>(File.ReadAllText(path), Options) ?? new()).Normalize(); }
-        catch (IOException) { return new(); }
-        catch (UnauthorizedAccessException) { return new(); }
-        catch (JsonException) { return new(); }
+        fallback ??= new();
+        try { return (JsonSerializer.Deserialize<HudAppearance>(File.ReadAllText(path), Options) ?? fallback).Normalize(); }
+        catch (IOException) { return fallback; }
+        catch (UnauthorizedAccessException) { return fallback; }
+        catch (JsonException) { return fallback; }
     }
 
     public void Write(HudAppearance appearance)

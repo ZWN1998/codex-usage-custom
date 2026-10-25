@@ -21,14 +21,16 @@ internal sealed class TitlebarHudWindow : Window
     private readonly StackPanel _panel;
     private readonly Border _refreshButton;
     private readonly DispatcherTimer _timer;
-    private readonly HudAppearanceStore _appearanceStore = new(System.IO.Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CodexUsageHud", "appearance.json"));
+    private readonly HudAppearanceStore _appearanceStore = new(OperatingSystem.IsWindows()
+        ? System.IO.Path.Combine(WindowsLifecycle.StateDirectory, "appearance.json")
+        : System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CodexUsageHud", "appearance.json"));
     private HudAppearance _appearance;
     private HudSettingsWindow? _settingsWindow;
     private CodexWindowSnapshot? _target;
     private string? _lastLayoutKey;
     private string? _lastPositionReport;
     private DateTimeOffset _hiddenUntil;
+    private DateTimeOffset _nextWindowStatus;
 
     public event Func<Task>? RefreshRequested;
 
@@ -36,7 +38,7 @@ internal sealed class TitlebarHudWindow : Window
     {
         _viewModel = viewModel;
         _tracker = tracker;
-        _appearance = (appearance ?? _appearanceStore.Read()).Normalize();
+        _appearance = (appearance ?? _appearanceStore.Read(DefaultAppearance)).Normalize();
         Title = "Codex Usage";
         Width = 420;
         Height = _appearance.RowHeight;
@@ -89,6 +91,23 @@ internal sealed class TitlebarHudWindow : Window
         var exit = new MenuItem { Header = "退出工具" };
         exit.Click += (_, _) => shutdown();
         _root.ContextMenu = new ContextMenu { Items = { refreshItem, settingsItem, hideItem, exit } };
+        if (OperatingSystem.IsWindows())
+        {
+            var autoStart = new MenuItem { Header = "跟随 Codex 自动运行", ToggleType = MenuItemToggleType.CheckBox,
+                IsChecked = WindowsLifecycle.AutoStartEnabled };
+            autoStart.Click += (_, _) =>
+            {
+                if (!OperatingSystem.IsWindows()) return;
+                try
+                {
+                    WindowsLifecycle.SetAutoStart(autoStart.IsChecked);
+                    if (autoStart.IsChecked) WindowsLifecycle.EnsureWatcher();
+                }
+                catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException or System.Runtime.InteropServices.COMException)
+                { autoStart.IsChecked = WindowsLifecycle.AutoStartEnabled; ToolTip.SetTip(autoStart, "登录项设置失败，请从安装目录重试"); }
+            };
+            _root.ContextMenu.Items.Insert(2, autoStart);
+        }
         _viewModel.Changed += OnChanged;
         Opened += (_, _) => ConfigureNativeWindow();
         _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(100), DispatcherPriority.Normal, TrackTarget);
@@ -116,10 +135,13 @@ internal sealed class TitlebarHudWindow : Window
     public void ShowSettings()
     {
         if (_settingsWindow is not null) { _settingsWindow.Activate(); return; }
-        _settingsWindow = new HudSettingsWindow(_appearance, _appearanceStore, ApplyAppearance, _usage.Text ?? "Codex Usage");
+        _settingsWindow = new HudSettingsWindow(_appearance, _appearanceStore, ApplyAppearance, _usage.Text ?? "Codex Usage", DefaultAppearance);
         _settingsWindow.Closed += (_, _) => { _settingsWindow = null; _lastPositionReport = null; };
         _settingsWindow.ShowFor(this);
     }
+
+    private static HudAppearance DefaultAppearance => OperatingSystem.IsWindows()
+        ? new HudAppearance(TextColor: "#8B99A6") : new HudAppearance();
 
     private void ApplyAppearance(HudAppearance appearance)
     {
@@ -157,9 +179,12 @@ internal sealed class TitlebarHudWindow : Window
         var now = DateTimeOffset.UtcNow;
         var scale = Math.Max(1, _target?.DisplayScale ?? 1);
         var vertical = _appearance.IsVertical;
-        var available = _target is null ? 600 : Math.Max(0,
+        var available = _target is not null && OperatingSystem.IsWindows()
+            ? WindowsHudPlacement.AvailableWidth(_target, _appearance)
+            : _target is null ? 600 : Math.Max(0,
             _target.Bounds.Width / scale
                 - (_appearance.Anchor is HudAnchor.TopCenter or HudAnchor.TopLeft or HudAnchor.TopRight ? 240 : 32));
+        if (available < 20) { Width = 20; _usage.Text = ""; return; }
         if (vertical) available = Math.Min(180, available);
         var availableHeight = _target is null ? 600 : Math.Max(22, _target.Bounds.Height / scale - 16);
         var key = $"{now.ToUnixTimeSeconds() / 60}:{available}:{availableHeight}:{_appearance}:{_viewModel.UsageError}:{_viewModel.IsRefreshing}";
@@ -209,33 +234,60 @@ internal sealed class TitlebarHudWindow : Window
     {
         try
         {
-            if (DateTimeOffset.UtcNow < _hiddenUntil || !_tracker.TryGetSnapshot(out var target)
-                || target is null || !target.IsVisible || target.IsMinimized)
+            if (DateTimeOffset.UtcNow < _hiddenUntil)
             {
+                ReportWindowStatus("Temporarily hidden", false);
+                if (IsVisible) Hide();
+                return;
+            }
+            if (!_tracker.TryGetSnapshot(out var target) || target is null || !target.IsVisible || target.IsMinimized)
+            {
+                ReportWindowStatus(target?.IsMinimized == true ? "Codex minimized" : "No visible Codex window", false);
                 if (IsVisible) Hide();
                 return;
             }
             _target = target;
+            if (OperatingSystem.IsWindows() && WindowsHudPlacement.AvailableWidth(target, _appearance) < 20)
+            { ReportWindowStatus("Titlebar too narrow", false); if (IsVisible) Hide(); return; }
             UpdateLayoutText();
             _platformHud.ApplyTheme(this, _root, target);
             var scale = Math.Max(1, target.DisplayScale);
             var width = (int)Math.Round(Width * scale);
             var height = (int)Math.Round(Height * scale);
             var position = _platformHud.GetPosition(target, width, height);
-            if (OperatingSystem.IsMacOS())
+            if (OperatingSystem.IsWindows())
+                position = WindowsHudPlacement.Position(target, width, height, _appearance);
+            else if (OperatingSystem.IsMacOS())
             {
                 var placement = HudPlacement.Position(target.Bounds, width, height, scale, _appearance);
                 position = new PixelPoint(placement.X, placement.Y);
             }
             _platformHud.Position(this, target, position.X, position.Y, width, height);
             if (!IsVisible) { Show(); ConfigureNativeWindow(); }
+            ReportWindowStatus("Tracking Codex", true);
             ReportPosition(position, target);
         }
         catch (Exception error)
         {
             System.Diagnostics.Debug.WriteLine($"HUD tracker failed: {error}");
+            ReportWindowStatus("Tracker error: " + error.GetType().Name + ": " + error.Message, false);
             Hide();
         }
+    }
+
+    private void ReportWindowStatus(string status, bool visible)
+    {
+        if (!OperatingSystem.IsWindows() || DateTimeOffset.UtcNow < _nextWindowStatus) return;
+        _nextWindowStatus = DateTimeOffset.UtcNow.AddSeconds(3);
+        try
+        {
+            var directory = WindowsLifecycle.StateDirectory;
+            System.IO.Directory.CreateDirectory(directory);
+            System.IO.File.WriteAllText(System.IO.Path.Combine(directory, "window-status.json"),
+                System.Text.Json.JsonSerializer.Serialize(new { UpdatedAt = DateTimeOffset.UtcNow, Status = status, Visible = visible }));
+        }
+        catch (System.IO.IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
 
     private void ReportPosition(PixelPoint requested, CodexWindowSnapshot target)
@@ -246,8 +298,8 @@ internal sealed class TitlebarHudWindow : Window
         _lastPositionReport = key;
         try
         {
-            var directory = System.IO.Path.Combine(Environment.GetFolderPath(
-                Environment.SpecialFolder.LocalApplicationData), "CodexUsageHud");
+            var directory = OperatingSystem.IsWindows() ? WindowsLifecycle.StateDirectory
+                : System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CodexUsageHud");
             System.IO.Directory.CreateDirectory(directory);
             System.IO.File.WriteAllText(System.IO.Path.Combine(directory, "layout-status.json"),
                 System.Text.Json.JsonSerializer.Serialize(new

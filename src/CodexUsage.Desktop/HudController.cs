@@ -12,7 +12,8 @@ internal sealed class HudController : IAsyncDisposable
     private readonly TitlebarHudWindow _window;
     private readonly CodexRateLimitsClient _usageClient = new();
     private readonly ResetStateResolver _resolver = new();
-    private readonly CompanionStateStore _stateStore = new();
+    private readonly CompanionStateStore _stateStore = new(OperatingSystem.IsWindows()
+        ? System.IO.Path.Combine(Platform.WindowsLifecycle.StateDirectory, "state.json") : null);
     private readonly CancellationTokenSource _cancellation = new();
     private readonly SemaphoreSlim _saveGate = new(1, 1);
     private readonly object _gate = new();
@@ -49,7 +50,7 @@ internal sealed class HudController : IAsyncDisposable
             _viewModel.SetUsage(_currentUsage);
             _viewModel.SetLatestReset(_publicReset.Status?.Data.LatestReset, isFresh: false);
             RecomputeResetOnUiThread();
-        });
+        }, DispatcherPriority.Normal, _cancellation.Token);
 
         _usageLoop = RunUsageLoopAsync(_cancellation.Token);
         _resetLoop = RunResetLoopAsync(_cancellation.Token);
@@ -60,10 +61,10 @@ internal sealed class HudController : IAsyncDisposable
         if (Interlocked.Exchange(ref _refreshing, 1) != 0) return;
         try
         {
-            await Dispatcher.UIThread.InvokeAsync(() => _viewModel.SetRefreshState(true));
+            await Dispatcher.UIThread.InvokeAsync(() => _viewModel.SetRefreshState(true), DispatcherPriority.Normal, _cancellation.Token);
             var snapshot = await _usageClient.RefreshAsync(_cancellation.Token).ConfigureAwait(false);
             await Dispatcher.UIThread.InvokeAsync(() => _viewModel.SetRefreshState(false,
-                snapshot is null ? "读取失败，请确认已登录 Codex；点击刷新重试" : null));
+                snapshot is null ? "读取失败，请确认已登录 Codex；点击刷新重试" : null), DispatcherPriority.Normal, _cancellation.Token);
         }
         catch (OperationCanceledException) { }
         catch

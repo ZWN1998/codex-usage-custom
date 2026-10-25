@@ -29,39 +29,33 @@ internal static class PlatformHudHostFactory
 
 internal sealed class WindowsHudHost : IPlatformHudHost
 {
-    private static readonly SolidColorBrush LightTitlebarBrush = new(Color.Parse("#EEF4F9"));
-    private static readonly SolidColorBrush DarkTitlebarBrush = new(Color.Parse("#E51F2022"));
-
     public void Initialize(Window window)
     {
-        // Transparent Avalonia windows are layered on Windows, which prevents ClearType
-        // from compositing against a known background. Keep this tiny text surface opaque.
-        window.Background = LightTitlebarBrush;
-        window.TransparencyBackgroundFallback = LightTitlebarBrush;
-        window.TransparencyLevelHint = [WindowTransparencyLevel.None];
+        window.Background = Brushes.Transparent;
+        window.TransparencyBackgroundFallback = Brushes.Transparent;
+        window.TransparencyLevelHint = [WindowTransparencyLevel.Transparent];
         window.UseLayoutRounding = true;
     }
 
     public void ConfigureText(TextBlock textBlock)
     {
         textBlock.FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI");
-        TextOptions.SetTextRenderingMode(textBlock, TextRenderingMode.SubpixelAntialias);
+        // A transparent surface has no known background for ClearType composition.
+        TextOptions.SetTextRenderingMode(textBlock, TextRenderingMode.Antialias);
         TextOptions.SetTextHintingMode(textBlock, TextHintingMode.Strong);
         TextOptions.SetBaselinePixelAlignment(textBlock, BaselinePixelAlignment.Aligned);
     }
 
     public void ConfigureRoot(Border root)
     {
-        root.Background = LightTitlebarBrush;
+        root.Background = Brushes.Transparent;
+        root.BorderThickness = new Thickness(0);
+        root.Padding = new Thickness(0);
     }
 
     public void ApplyTheme(Window window, Border root, CodexWindowSnapshot? target)
     {
-        var dark = target?.IsDarkMode ?? false;
-        var titlebarBrush = dark ? DarkTitlebarBrush : LightTitlebarBrush;
-        window.Background = titlebarBrush;
-        window.TransparencyBackgroundFallback = titlebarBrush;
-        root.Background = titlebarBrush;
+        // User-selected text colors apply at every anchor, including over content.
     }
 
     public void ConfigureNativeWindow(Window window, CodexWindowSnapshot target)

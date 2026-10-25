@@ -1,5 +1,9 @@
 # Codex Usage Custom
 
+> **Windows x64 0.1.6**：新增透明单行 Windows 浮窗、六种位置/偏移、字号/颜色设置、独立原生登录管理器与安装/卸载入口。详见 [README-Windows.md](README-Windows.md) 和 [验证记录](WINDOWS-VALIDATION.md)。Windows 的构建、UI 与整机重启验收状态以独立 Windows Release 记录为准。
+>
+> 下方保留的 0.1.5 Mac 说明属于原有发布；Mac 安装包不被本次 Windows 适配覆盖。0.1.5 的完整下载入口为 [Mac v0.1.5 Release](https://github.com/ZWN1998/codex-usage-custom/releases/tag/v0.1.5)。
+
 可自定义位置、方向、字号和颜色的 Codex 桌面用量浮窗。
 本发行包支持 **macOS Apple 芯片（arm64）**；基于 [Jay Hilwig 的 Codex Usage](https://github.com/jayhilwig/codexusage) 修改，非上游官方发行版。
 

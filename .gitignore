@@ -2,6 +2,7 @@
 **/obj/
 artifacts/
 .tmp/
+.tools/
 .DS_Store
 *.pdb
 *.user

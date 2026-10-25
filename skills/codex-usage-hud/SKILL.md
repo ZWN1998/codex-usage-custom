@@ -1,14 +1,22 @@
 ---
 name: codex-usage-hud
-description: Start, stop, or check the customized native Codex Usage companion on a local macOS Apple silicon desktop.
+description: Start, stop, check, or configure the customized Codex Usage companion on a local Windows x64 desktop or a separately packaged macOS Apple silicon desktop.
 ---
 
-Manage the native companion through `sh ../../scripts/hud.sh Start|Stop|Status`,
-resolved relative to this skill directory. Restart means Stop then Start.
+Resolve launchers relative to this skill directory. On Windows x64 run
+`../../scripts/hud.ps1 -Action Start|Stop|Status|Settings` directly in the current
+PowerShell host. The self-contained helper needs no .NET SDK. Start enables the
+native per-user login watcher and dispatches through the real Explorer desktop;
+the watcher displays the HUD while Codex runs. Stop stops this session; disable
+the login setting through the HUD or the uninstall script to persistently stop it.
+Settings opens or focuses appearance settings. Restart means Stop then Start.
 
-This package supports local macOS Apple silicon (arm64) only. Run Start/Restart
-while the Codex desktop app is open. For Intel, Windows, Linux, web, mobile, cloud
-or remote execution, explain that this package cannot run there; do not launch it.
+The Windows release contains only win-x64. For a separate macOS arm64 release,
+use `sh ../../scripts/hud.sh Start|Stop|Status` when that launcher and native Mac
+bundle are present. Never launch a Windows executable on Mac or claim that source
+files alone provide a Mac binary. Intel Mac, Linux, web, mobile, cloud and remote
+execution are outside the published packages. GUI starts require a local signed-in
+desktop and the platform's normal host approval when required.
 
 For Start, invoke the launcher immediately. Do not inspect the environment first
 or issue a separate Status after a successful Start. Diagnose only a failure or

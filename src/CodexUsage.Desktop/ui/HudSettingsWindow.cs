@@ -31,7 +31,7 @@ internal sealed class HudSettingsWindow : Window
     private bool _pendingSave;
 
     public HudSettingsWindow(HudAppearance appearance, HudAppearanceStore store,
-        Action<HudAppearance> apply, string previewText)
+        Action<HudAppearance> apply, string previewText, HudAppearance? defaults = null)
     {
         _appearance = appearance;
         _store = store;
@@ -168,7 +168,7 @@ internal sealed class HudSettingsWindow : Window
             Background = Brushes.White, Padding = new Thickness(12), CornerRadius = new CornerRadius(8),
         });
         var reset = new Button { Content = "恢复默认" };
-        reset.Click += (_, _) => Change(new HudAppearance());
+        reset.Click += (_, _) => Change(defaults ?? new HudAppearance());
         var done = new Button { Content = "完成", HorizontalAlignment = HorizontalAlignment.Right };
         done.Click += (_, _) => Close();
         var footer = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Margin = new Thickness(24, 4, 24, 18) };
@@ -203,8 +203,8 @@ internal sealed class HudSettingsWindow : Window
     {
         try
         {
-            var directory = System.IO.Path.Combine(Environment.GetFolderPath(
-                Environment.SpecialFolder.LocalApplicationData), "CodexUsageHud");
+            var directory = OperatingSystem.IsWindows() ? WindowsLifecycle.StateDirectory
+                : System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CodexUsageHud");
             System.IO.Directory.CreateDirectory(directory);
             System.IO.File.WriteAllText(System.IO.Path.Combine(directory, "settings-status.json"),
                 System.Text.Json.JsonSerializer.Serialize(new { UpdatedAt = DateTimeOffset.UtcNow, Visible = visible, Width, Height }));

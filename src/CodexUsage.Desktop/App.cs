@@ -29,6 +29,19 @@ public sealed class App : Application
             var hud = new TitlebarHudWindow(viewModel, tracker, () => desktop.Shutdown());
             _controller = new HudController(viewModel, hud);
             _ = _controller.StartAsync();
+            if (OperatingSystem.IsWindows())
+            {
+                var stopSignal = WindowsLifecycle.StopHudSignal();
+                var settingsSignal = WindowsLifecycle.SettingsSignal();
+                var controls = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(300) };
+                controls.Tick += (_, _) =>
+                {
+                    if (stopSignal.WaitOne(0)) desktop.Shutdown();
+                    else if (settingsSignal.WaitOne(0)) hud.ShowSettings();
+                };
+                controls.Start();
+                desktop.Exit += (_, _) => { controls.Stop(); stopSignal.Dispose(); settingsSignal.Dispose(); };
+            }
             if (Environment.GetCommandLineArgs().Contains("--settings"))
                 Avalonia.Threading.Dispatcher.UIThread.Post(hud.ShowSettings, Avalonia.Threading.DispatcherPriority.Background);
 

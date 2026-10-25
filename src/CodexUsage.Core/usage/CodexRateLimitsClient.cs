@@ -278,6 +278,40 @@ public sealed class CodexRateLimitsClient : ICodexRateLimitsSource
 
         if (OperatingSystem.IsWindows())
         {
+            // The Windows installer records a discovered CLI, not credentials.
+            // If an app update removes that path, discover it again from the desktop process.
+            try
+            {
+                var hint = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    ".codex", "usage-custom-windows", "codex-path.txt");
+                if (File.Exists(hint))
+                {
+                    var executable = File.ReadAllText(hint).Trim();
+                    if (File.Exists(executable)) return executable;
+                }
+                foreach (var process in Process.GetProcessesByName("ChatGPT").Concat(Process.GetProcessesByName("Codex")))
+                {
+                    using (process)
+                    {
+                        try
+                        {
+                            var executable = process.MainModule?.FileName;
+                            if (executable is null || !(executable.Contains(@"\WindowsApps\OpenAI.Codex_", StringComparison.OrdinalIgnoreCase)
+                                || executable.Contains(@"\OpenAI\Codex\", StringComparison.OrdinalIgnoreCase))) continue;
+                            var directory = Path.GetDirectoryName(executable)!;
+                            foreach (var relative in new[] { @"resources\codex.exe", @"resources\codex-cli\codex.exe", @"resources\bin\codex.exe", @"bin\codex.exe" })
+                            {
+                                var candidate = Path.Combine(directory, relative);
+                                if (File.Exists(candidate)) return candidate;
+                            }
+                        }
+                        catch (System.ComponentModel.Win32Exception) { }
+                        catch (InvalidOperationException) { }
+                    }
+                }
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
             try
             {
                 var binRoot = Path.Combine(

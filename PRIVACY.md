@@ -14,3 +14,7 @@
 
 反馈：[GitHub Issues](https://github.com/ZWN1998/codex-usage-custom/issues)。
 请勿在公开反馈中附上认证信息、真实账号资料或私人聊天截图。
+
+## Windows 适配版
+
+Windows 外观、CLI 路径提示、额度缓存与管理器状态保存在当前用户 .codex/usage-custom-windows；数值布局诊断可能保存在 LocalAppData/CodexUsageHud。用户登录项仅指向本工具。发行包不包含开发者的用户配置、账号状态、聊天或日志。
